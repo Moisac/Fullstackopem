@@ -1,4 +1,7 @@
 const express = require('express')
+const mongoose = require('mongoose')
+mongoose.set('useFindAndModify', false)
+mongoose.set('useCreateIndex', true);
 const morgan = require('morgan')
 const app = express()
 const cors = require('cors')
@@ -9,6 +12,7 @@ const Person = require('./models/person')
 app.use(express.static('build'))
 app.use(express.json())
 app.use(cors())
+
 
 morgan.token('body', function (req, res) { 
   return JSON.stringify(req.body) 
@@ -31,14 +35,8 @@ app.use(morgan(':method :url :status :response-time ms - :res[content-length] :b
    return Math.floor(Math.random() * 6) + 1
   }
 
-  app.post('/api/phonebook', (req, res) => {
+  app.post('/api/phonebook', (req, res, next) => {
     const body = req.body
-
-    if(body.name === '') {
-      return res.status(400).json({
-        error: 'Name or number can\'t be empty'
-      })
-    }
 
     const person = new Person({
         name: body.name,
@@ -48,6 +46,11 @@ app.use(morgan(':method :url :status :response-time ms - :res[content-length] :b
     person.save().then(newPerson => {
       res.json(newPerson.toJSON())
     })
+      .catch(error => {
+        console.log(error.res.data)
+
+        return next(error)
+      })
   })
 
   app.get('/api/phonebook/:id', (req, res) => {
@@ -78,7 +81,11 @@ app.use(morgan(':method :url :status :response-time ms - :res[content-length] :b
       .then(updatedNumber => {
         res.json(updatedNumber.toJSON())
       })
-      .catch(error => next(error))
+      .catch(error => {
+        console.log(error.res.data)
+
+        return next(error)
+      })
   })
 
   app.delete('/api/phonebook/:id', (req, res) => {
@@ -95,6 +102,8 @@ app.use(morgan(':method :url :status :response-time ms - :res[content-length] :b
 
     if(error.name === 'CaseError' && error.kind === 'ObjectId') {
       return res.status(400).send({ error: 'malformatted id' })
+    } else if(error.name === 'ValidationError') {
+      return res.status(400).json({ error: error.message })
     }
 
     next(error)
