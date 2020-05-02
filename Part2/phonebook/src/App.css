@@ -1,0 +1,21 @@
+.notification {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  background: green;
+  color: #fff;
+  font-size: 20px;
+  padding: 20px 30px;
+  border-radius: 5px;
+}
+
+.error {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  background: red;
+  color: #fff;
+  font-size: 20px;
+  padding: 20px 30px;
+  border-radius: 5px;
+}
