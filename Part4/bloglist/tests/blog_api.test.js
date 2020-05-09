@@ -20,6 +20,11 @@ const initialBlog = [
     }
 ]
 
+const blogsInDb = async () => {
+    const blogs = await Blog.find({})
+    return blogs.map(blog => blog.toJSON())
+}
+
 beforeEach(async () => {
     await Blog.deleteMany({})
 
@@ -105,6 +110,22 @@ test("if title and url are missing", async () => {
 
     expect(response.body).toHaveLength(initialBlog.length);
   });
+  describe('deletion of a blog', () => {
+      test('succeds with a status of 204 if id is valid', async () => {
+          const blogAtStart = await blogsInDb()
+          const blogToDelete = blogAtStart[0]
+
+          await api
+            .delete(`/api/blogs/${blogToDelete.id}`)
+            .expect(204)
+
+            const blogAtEnd = await blogsInDb()
+
+            expect(blogAtEnd).toHaveLength(
+                initialBlog.length - 1
+            )
+      })
+  })
 afterAll(() => {
     mongoose.connection.close()
 })
