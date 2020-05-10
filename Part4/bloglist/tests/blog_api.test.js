@@ -2,6 +2,8 @@ const mongoose = require('mongoose')
 const supertest = require('supertest')
 const app = require('../app')
 const Blog = require('../models/blogs')
+const User = require('../models/users')
+const helper = require('./test_helper')
 
 const api = supertest(app)
 
@@ -59,13 +61,14 @@ test('blog unique identifier', async () => {
 test('a new blog can be added', async () => {
     const Blog = {
         title: 'adding blog for testing',
-        author: 'Moisa Claudiu',
+        author: 'Claudiu',
         url: 'http://test.com',
         likes: 15
     }
 
     await api
         .post('/api/blogs')
+        .set('Authorization', 'YOUR_TOKEN')
         .send(Blog)
         .expect(200)
         .expect('Content-Type', /application\/json/)
@@ -74,8 +77,29 @@ test('a new blog can be added', async () => {
 
     const contents = response.body.map(r => r.title)
 
-    expect(response.body).toHaveLength(3)
+    expect(response.body).toHaveLength(initialBlog.length + 1)
     expect(contents).toContain('adding blog for testing')
+})
+
+test('can\'t add blog without correct token', async () => {
+    const Blog = {
+        title: 'blog without correct token',
+        author: 'test',
+        url: 'http://test.com',
+        likes: 15
+    }
+    await api
+        .post('/api/blogs')
+        .set('Authorization', 'YOUR_TOKEN')
+        .send(Blog)
+        .expect(401)
+        .expect('Content-Type', /application\/json/)
+
+    const response = await api.get('/api/blogs')
+
+    const contents = response.body.map(r => r.title)
+
+    expect(response.body).toHaveLength(initialBlog.length)
 })
 
 test('if likes property missing', async () => {
@@ -125,6 +149,33 @@ test("if title and url are missing", async () => {
                 initialBlog.length - 1
             )
       })
+  })
+  describe('when there is initially one user at db', () => {
+    beforeEach(async () => {
+      await User.deleteMany({})
+      const user = new User({ username: 'root', password: 'sekret' })
+      await user.save()
+    })
+
+    
+    test('creation fails with proper statuscode and message if username already taken', async () => {
+      const usersAtStart = await helper.usersInDb()
+
+      const newUser = {
+        username: 'root',
+        name: 'Superuser',
+        password: 'salainen',
+      }
+
+      const result = await api
+        .post('/api/users')
+        .send(newUser)
+        .expect(400)
+        .expect('Content-Type', /application\/json/)
+
+      const usersAtEnd = await helper.usersInDb()
+      expect(usersAtEnd.length).toBe(usersAtStart.length)
+    })
   })
 afterAll(() => {
     mongoose.connection.close()
